@@ -23,17 +23,6 @@ production:
   password: db.password                                                         
   socket: /var/run/mysqld/mysqld.sock
 
-bart:
-  adapter: mysql2
-  encoding: utf8                                                                
-  reconnect: false                                                              
-  database: bart2/bart database
-  pool: 5                                                                       
-  username: db.username                                                             
-  password: db.password                                                         
-  socket: /var/run/mysqld/mysqld.sock
-
-
 # Warning: The database defined as "test" will be erased and
 # re-generated from your development database when you run "rake".
 # Do not set this db to the same as development or production.
