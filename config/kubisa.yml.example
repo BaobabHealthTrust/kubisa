@@ -1,0 +1,17 @@
+production:
+ public_key: 662527
+ private_key: 1576805919
+ modulo: 5833793551
+
+development:
+ public_key: 662527
+ private_key: 1576805919
+ modulo: 5833793551
+
+test: &TEST
+ public_key: 662527
+ private_key: 1576805919
+ modulo: 5833793551
+
+cucumber:
+  <<: *TEST
