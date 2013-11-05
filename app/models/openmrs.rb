@@ -30,6 +30,11 @@ class Openmrs < ActiveRecord::Base
     end
   end
 
+	def self.max_person_id
+    connection = ActiveRecord::Base.connection
+    connection.select_all("SELECT MAX(person_id) person_id FROM #{target_db_name}.person;")[0]['person_id']
+	end
+
   private
 
   def self.next_person_id
@@ -44,7 +49,7 @@ class Openmrs < ActiveRecord::Base
 
   def self.fake(person_id)
     self.transaction do
-      new_person_id = self.next_person_id
+      new_person_id = self.encode(person_id)
       connection = ActiveRecord::Base.connection                                
 
       connection.execute("UPDATE #{target_db_name}.person 
@@ -146,5 +151,108 @@ class Openmrs < ActiveRecord::Base
     connection = ActiveRecord::Base.connection                                
     connection.select_all("SELECT * FROM #{target_db_name}.users;")
   end
+
+	#Euclid's algorithm: calculate greatest common divisor (gcd) of numbers a and b
+	#return greatest common divisor of a and b
+	def self.greastest_common_divisor(a,b)
+		  r = 1
+
+		  while r>0 do
+		      r = a % b;
+		      a = b;
+		      b = r;
+		  end
+		  return a
+	end
+
+	#Extended Euclid's algorithm : solves the equation xm + yn = c
+	#where m and n are given numbers. C is equal to gcd of m and n
+	def self.extended_greastest_common_divisor(m,n)
+		v = []
+		if m == 0
+			v = [n,0,1]
+		else
+
+			r = n%m
+			v = self.extended_greastest_common_divisor(r, m)
+			s = v[2]-n/m*v[1]
+			v[2]=v[1];
+			v[1]=s;
+		end
+		return v
+	end
+
+	#calculate m = x^y%n more efficiently
+	def self.fast_exponentiation(x,y,n)
+		r = 1
+		m = 1
+
+		while y !=0 do
+			r = y%2
+			y = y/2
+
+			if r==1 then
+				m = (m*x)%n
+			end
+			x=(x**2)%n
+		end
+		return m
+	end
+
+	#generate public key given t = (prime_a-1)*(prime_b-1) and n=prime_a*prime_b
+	def self.generate_public_key(t,n)
+
+		while true do
+			r =  (rand()*1000000).to_i
+			e = r%(n-2) + 2
+
+			if self.greastest_common_divisor(e,t) == 1 && e > 100000
+				return e
+			end
+		end
+	end
+
+	#returns a 3 element hash of public,private key and mod: [public,private,mod]
+	def self.generate_keys(prime_a, prime_b)
+		p = prime_a
+		q = prime_b
+
+		n = p*q
+
+		t = (p-1)*(q-1)
+		e = generate_public_key(t,n)
+		puk = e
+		c,d,k = self.extended_greastest_common_divisor(e,t)
+
+		while d<0 do
+			d = d+t
+		end
+		prk = d
+
+		return {"public"=>puk, "private"=>prk, "mod"=>n}
+	end
+
+	def self.public_key
+			YAML.load(File.open(File.join(Rails.root,
+      "config/kubisa.yml"), "r"))[Rails.env]['public_key']
+	end
+
+	def self.private_key
+			YAML.load(File.open(File.join(Rails.root,
+      "config/kubisa.yml"), "r"))[Rails.env]['private_key']
+	end
+
+	def self.modulo
+			YAML.load(File.open(File.join(Rails.root,
+      "config/kubisa.yml"), "r"))[Rails.env]['modulo']
+	end
+
+	def self.encode(data)
+		self.fast_exponentiation(data,self.public_key,self.modulo)+Openmrs.max_person_id
+	end
+
+	def self.decode(data)
+		self.fast_exponentiation(data-Openmrs.max_person_id,self.private_key,self.modulo)
+	end
 
 end
