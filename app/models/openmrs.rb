@@ -248,11 +248,58 @@ class Openmrs < ActiveRecord::Base
 	end
 
 	def self.encode(data)
-		self.fast_exponentiation(data,self.public_key,self.modulo)+Openmrs.max_person_id
+		self.fast_exponentiation(data,self.public_key,self.modulo)+self.modulo
 	end
 
 	def self.decode(data)
-		self.fast_exponentiation(data-Openmrs.max_person_id,self.private_key,self.modulo)
+		self.fast_exponentiation(data-self.modulo,self.private_key,self.modulo)
 	end
 
+  def self.unfake(person_id)
+    self.transaction do
+      new_person_id = self.decode(person_id)
+      connection = ActiveRecord::Base.connection
+
+      connection.execute("UPDATE #{target_db_name}.person
+      SET person_id = #{new_person_id} WHERE person_id = #{person_id};")
+
+      connection.execute("UPDATE #{target_db_name}.person_name
+      SET person_id = #{new_person_id} WHERE person_id = #{person_id};")
+
+      connection.execute("UPDATE #{target_db_name}.person_attribute
+      SET person_id = #{new_person_id} WHERE person_id = #{person_id};")
+
+      connection.execute("UPDATE #{target_db_name}.person_address
+      SET person_id = #{new_person_id} WHERE person_id = #{person_id};")
+
+
+
+      connection.execute("UPDATE #{target_db_name}.patient
+      SET patient_id = #{new_person_id} WHERE patient_id = #{person_id};")
+
+      connection.execute("UPDATE #{target_db_name}.patient_identifier
+      SET patient_id = #{new_person_id} WHERE patient_id = #{person_id};")
+
+      connection.execute("UPDATE #{target_db_name}.patient_program
+      SET patient_id = #{new_person_id} WHERE patient_id = #{person_id};")
+
+      connection.execute("UPDATE #{target_db_name}.encounter
+      SET patient_id = #{new_person_id} WHERE patient_id = #{person_id};")
+
+      connection.execute("UPDATE #{target_db_name}.obs
+      SET person_id = #{new_person_id} WHERE person_id = #{person_id};")
+    end
+  end
+
+  def self.unfaker
+    people = self.get_people
+    connection = ActiveRecord::Base.connection
+    connection.execute("SET foreign_key_checks = 0;")
+
+    (people || []).each_with_index do |person_hash , i|
+      person_id = person_hash['person_id']
+      self.unfake(person_id)
+      puts "................ #{people.length - i} to go"
+    end
+  end
 end
