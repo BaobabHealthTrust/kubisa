@@ -2,6 +2,16 @@ class Openmrs < ActiveRecord::Base
   # attr_accessible :title, :body
   set_table_name :person 
 
+  @@nationl_identifier_type = PatientIdentifierType.find_by_name('National Id')
+  @@arv_identifier_type = PatientIdentifierType.find_by_name('ARV Number')
+  @@old_nationl_identifier_type = PatientIdentifierType.find_by_name('Old Identification Number')
+  @@filing_identifier_type = PatientIdentifierType.find_by_name('Filing number')
+  @@archived_filing_identifier_type = PatientIdentifierType.find_by_name('Archived filing number')
+
+  @@cell_phone_attribute_type = PersonAttributeType.find_by_name('Cell Phone Number')
+  @@home_phone_attribute_type = PersonAttributeType.find_by_name('Home Phone Number')
+  @@office_phone_attribute_type = PersonAttributeType.find_by_name('Office Phone Number')
+
   def randomDate(params={})
     years_back = params[:year_range] || 5
     latest_year  = params [:year_latest] || 0
@@ -81,6 +91,10 @@ class Openmrs < ActiveRecord::Base
       connection.execute("UPDATE #{target_db_name}.obs 
       SET person_id = #{new_person_id} WHERE person_id = #{person_id};")
 
+      connection.execute("UPDATE #{target_db_name}.obs 
+      SET value_text = '#{Faker::Lorem.paragraph(sentence_count = 3)}' 
+      WHERE person_id = #{new_person_id} AND value_text IS NOT NULL;")
+
 
       self.fake_address(new_person_id)
       self.fake_name(new_person_id)
@@ -132,9 +146,36 @@ class Openmrs < ActiveRecord::Base
   end
   
   def self.fake_person_attribute(new_person_id)
+    (PersonAttribute.where(:person_id => new_person_id) || []).each do |attribute|
+      if attribute.person_attribute_type_id == @@cell_phone_attribute_type.id
+        attribute.value = Faker::PhoneNumber.cell_phone
+      elsif attribute.person_attribute_type_id == @@home_phone_attribute_type.id 
+        or attribute.person_attribute_type_id == @@office_phone_attribute_type.id
+          attribute.value = Faker::PhoneNumber.phone_number
+      else
+        attribute.value =  Faker::Lorem.words(1)
+      end
+      attribute.save
+    end
   end
   
   def self.fake_patient_identifier(new_person_id)
+    (PatientIdentifier.where(:patient_id => new_person_id) || []).each_with_index do |identifier, i|
+      if identifier.identifier_type == @@nationl_identifier_type.id
+        identifier.identifier = "NI #{new_person_id + i}"
+      elsif identifier.identifier_type == @@arv_identifier_type.id
+        identifier.identifier = "ARV #{new_person_id + i}"
+      elsif identifier.identifier_type == @@archived_filing_identifier_type.id
+        identifier.identifier = "AFNL #{new_person_id + i}"
+      elsif identifier.identifier_type == @@filing_identifier_type.id
+        identifier.identifier = "FNL #{new_person_id + i}"
+      elsif identifier.identifier_type == @@old_nationl_identifier_type.id
+        identifier.identifier = "ONL #{new_person_id + i}"
+      else
+        identifier.identifier = "OTHER #{new_person_id + i}"
+      end
+      identifier.save
+    end
   end
 
   def self.target_db_name
