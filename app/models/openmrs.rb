@@ -53,10 +53,17 @@ class Openmrs < ActiveRecord::Base
 
     users = self.find_by_sql("SELECT * FROM users")
     (users || []).each do |user|
+    
+    	new_user_id = self.encode(user.user_id)
+    	
       connection.execute("UPDATE #{target_db_name}.users 
       SET person_id = #{self.encode(user.person_id)} ,
-      user_id = #{self.encode(user.user_id)} 
+      user_id = #{new_user_id}
       WHERE user_id = #{user.user_id};")
+      
+      connection.execute("UPDATE #{target_db_name}.users 
+      SET username = #{Faker::Name.first_name} 
+      WHERE user_id = #{new_user_id};")
     end 
     
   end
@@ -137,8 +144,8 @@ class Openmrs < ActiveRecord::Base
 
       connection.execute("UPDATE #{target_db_name}.person_address 
       SET person_id = #{new_person_id} WHERE person_id = #{person_id};")
-
-
+      
+      
 
       connection.execute("UPDATE #{target_db_name}.patient 
       SET patient_id = #{new_person_id} WHERE patient_id = #{person_id};")
