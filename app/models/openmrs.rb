@@ -46,6 +46,63 @@ class Openmrs < ActiveRecord::Base
 	end
 
   private
+  
+  def self.fake_user_table
+    connection = ActiveRecord::Base.connection                                
+    connection.execute("SET foreign_key_checks = 0;")
+
+    users = self.find_by_sql("SELECT * FROM users")
+    (users || []).each do |user|
+      connection.execute("UPDATE #{target_db_name}.users 
+      SET person_id = #{self.encode(user.person_id)} ,
+      user_id = #{self.encode(user.user_id)} 
+      WHERE user_id = #{user.user_id};")
+    end 
+    
+  end
+   
+  def self.update_all_tables_to_fake_user_ids
+    ActiveRecord::Base.connection.tables.each_with_index do |table, i|
+      t1 = self.find_by_sql("SELECT * FROM #{table}")
+      next if t1.blank?
+
+      t = self.find_by_sql("SELECT * FROM #{table} LIMIT 1")[0]
+      
+      if t.attributes.has_key?("changed_by")
+        (t1 || []).each do |t2|
+          next if t2.changed_by.blank?
+          t2.changed_by = self.encode(t2.changed_by)
+          t2.save
+        end
+      end
+
+      if t.attributes.has_key?("creator")
+        (t1 || []).each do |t2|
+          next if t2.creator.blank?
+          t2.creator = self.encode(t2.creator)
+          t2.save
+        end
+      end
+
+      if t.attributes.has_key?("provider_id")
+        (t1 || []).each do |t2|
+          next if t2.provider_id.blank?
+          t2.provider_id = self.encode(t2.provider_id)
+          t2.save
+        end
+      end
+
+      if t.attributes.has_key?("voided_by")
+        (t1 || []).each do |t2|
+          next if t2.voided_by.blank?
+          t2.voided_by = self.encode(t2.voided_by)
+          t2.save
+        end
+      end
+
+      puts "updated table: #{table} ...."
+    end
+  end
 
   def self.next_person_id
     connection = ActiveRecord::Base.connection                                
@@ -101,6 +158,9 @@ class Openmrs < ActiveRecord::Base
       self.fake_person_attribute(new_person_id)
       self.fake_patient_identifier(new_person_id)
     end
+
+    self.fake_user_table
+    self.update_all_tables_to_fake_user_ids
   end
 
   def self.fake_address(new_person_id)
@@ -149,8 +209,7 @@ class Openmrs < ActiveRecord::Base
     (PersonAttribute.where(:person_id => new_person_id) || []).each do |attribute|
       if attribute.person_attribute_type_id == @@cell_phone_attribute_type.id
         attribute.value = Faker::PhoneNumber.cell_phone
-      elsif attribute.person_attribute_type_id == @@home_phone_attribute_type.id 
-        or attribute.person_attribute_type_id == @@office_phone_attribute_type.id
+      elsif attribute.person_attribute_type_id == @@home_phone_attribute_type.id or attribute.person_attribute_type_id == @@office_phone_attribute_type.id
           attribute.value = Faker::PhoneNumber.phone_number
       else
         attribute.value =  Faker::Lorem.words(1)
