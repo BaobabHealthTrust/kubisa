@@ -159,6 +159,10 @@ class Openmrs < ActiveRecord::Base
       SET value_text = '#{Faker::Lorem.paragraph(sentence_count = 3)}' 
       WHERE person_id = #{new_person_id} AND value_text IS NOT NULL;")
 
+      connection.execute("UPDATE #{target_db_name}.obs 
+      SET void_reason = '#{Faker::Lorem.paragraph(sentence_count = 2)}' 
+      WHERE person_id = #{new_person_id} AND void_reason IS NOT NULL;")
+
 
       self.fake_address(new_person_id)
       self.fake_name(new_person_id)
