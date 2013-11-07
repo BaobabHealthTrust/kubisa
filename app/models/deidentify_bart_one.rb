@@ -419,7 +419,7 @@ class DeidentifyBartOne < ActiveRecord::Base
 							AND identifier = \"#{identifier.identifier}\" 
 							AND identifier_type = #{identifier.identifier_type};")
       	      
-      elsif identifier.identifiehttps://www.facebook.com/r_type == @@filing_identifier_type.id
+      elsif identifier.identifier_type == @@filing_identifier_type.id
         #identifier.identifier = "FNL #{new_patient_id + i}"
 				connection.execute("UPDATE #{target_db_name}.patient_identifier 
 					SET identifier = \"FNL #{new_patient_id + i}\"
