@@ -525,7 +525,7 @@ class DeidentifyBartOne < ActiveRecord::Base
       WHERE user_id = #{new_user_id};")
       
       connection.execute("UPDATE #{target_db_name}.users 
-      SET middle_name = \"#{Faker::Name.last_name}\"
+      SET last_name = \"#{Faker::Name.last_name}\"
       WHERE user_id = #{new_user_id};")
     end
   end
