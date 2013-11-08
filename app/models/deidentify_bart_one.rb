@@ -29,10 +29,17 @@ class DeidentifyBartOne < ActiveRecord::Base
   end
 
   def self.faker
+  
+  	start_time = Time.now
+  	
 		self.people_faker
 		self.patient_faker	
     self.fake_user_table
     self.update_all_tables_to_fake_user_ids
+    
+    end_time = Time.now
+    
+    `echo "start time: #{start_time} \n end time: #{end_time} \n Diff = #{end_time-start_time}" >> #{target_db_name}.TIME`
   end
 
   def self.patient_faker
@@ -507,10 +514,12 @@ class DeidentifyBartOne < ActiveRecord::Base
     users = self.find_by_sql("SELECT * FROM users")
     (users || []).each do |user|
     	
-    	new_user_id = self.encode(user.user_id)
+    	old_user_id = user.user_id
+    	new_user_id = self.encode(old_user_id)
+    	
       connection.execute("UPDATE #{target_db_name}.users 
       SET user_id = #{new_user_id} 
-      WHERE user_id = #{user.user_id};")
+      WHERE user_id = #{old_user_id};")
 
       connection.execute("UPDATE #{target_db_name}.users 
       SET username = \"#{Faker::Name.first_name}\"
@@ -527,6 +536,14 @@ class DeidentifyBartOne < ActiveRecord::Base
       connection.execute("UPDATE #{target_db_name}.users 
       SET last_name = \"#{Faker::Name.last_name}\"
       WHERE user_id = #{new_user_id};")
+
+      connection.execute("UPDATE #{target_db_name}.user_role 
+      SET user_id = #{new_user_id} 
+      WHERE user_id = #{old_user_id};")
+      
+      connection.execute("UPDATE #{target_db_name}.user_property
+      SET user_id = #{new_user_id} 
+      WHERE user_id = #{old_user_id};")
     end
   end
 end
