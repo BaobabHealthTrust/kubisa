@@ -470,6 +470,7 @@ class DeidentifyBartOne < ActiveRecord::Base
       if t.attributes.has_key?("changed_by")
         (t1 || []).each do |t2|
           next if t2.changed_by.blank?
+          next if t2.changed_by.to_i >= self.public_key.to_i
           connection.execute("UPDATE #{target_db_name}.#{table} 
           SET changed_by = #{self.encode(t2.changed_by)} 
           WHERE changed_by = #{t2.changed_by};")
@@ -479,6 +480,7 @@ class DeidentifyBartOne < ActiveRecord::Base
       if t.attributes.has_key?("creator")
         (t1 || []).each do |t2|
           next if t2.creator.blank?
+          next if t2.creator.to_i >= self.public_key.to_i
           connection.execute("UPDATE #{target_db_name}.#{table} 
           SET creator = #{self.encode(t2.creator)} 
           WHERE creator = #{t2.creator};")
@@ -488,6 +490,8 @@ class DeidentifyBartOne < ActiveRecord::Base
       if t.attributes.has_key?("provider_id")
         (t1 || []).each do |t2|
           next if t2.provider_id.blank?
+          next if t2.provider_id.to_i  >= self.public_key.to_i
+          
           connection.execute("UPDATE #{target_db_name}.#{table} 
           SET provider_id = #{self.encode(t2.provider_id)} 
           WHERE provider_id = #{t2.provider_id};")
@@ -496,7 +500,8 @@ class DeidentifyBartOne < ActiveRecord::Base
 
       if t.attributes.has_key?("voided_by")
         (t1 || []).each do |t2|
-          next if t2.voided_by.blank?
+          next if t2.voided_by.blank?	
+          next if t2.voided_by.to_i >= self.public_key.to_i
           connection.execute("UPDATE #{target_db_name}.#{table} 
           SET voided_by = #{self.encode(t2.voided_by)} 
           WHERE voided_by = #{t2.voided_by};")
@@ -513,7 +518,7 @@ class DeidentifyBartOne < ActiveRecord::Base
 
     users = self.find_by_sql("SELECT * FROM users")
     (users || []).each do |user|
-    	
+    		
     	old_user_id = user.user_id
     	new_user_id = self.encode(old_user_id)
     	
