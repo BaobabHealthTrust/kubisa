@@ -467,44 +467,55 @@ class DeidentifyBartOne < ActiveRecord::Base
 
       t = self.find_by_sql("SELECT * FROM #{table} LIMIT 1")[0]
       
-      if t.attributes.has_key?("changed_by")
+      if t.attributes.has_key?("changed_by") 
+ 				ids = []
         (t1 || []).each do |t2|
-          next if t2.changed_by.blank?
-          next if t2.changed_by.to_i >= self.public_key.to_i
-          connection.execute("UPDATE #{target_db_name}.#{table} 
-          SET changed_by = #{self.encode(t2.changed_by)} 
-          WHERE changed_by = #{t2.changed_by};")
+          next if t2.changed_by.blank?        
+          if !ids.include?(t2.changed_by.to_i)   
+		        connection.execute("UPDATE #{target_db_name}.#{table} 
+		        SET changed_by = #{self.encode(t2.changed_by)} 
+		        WHERE changed_by = #{t2.changed_by};")
+		        ids << t2.changed_by.to_i
+		      end  
         end
       end
 
       if t.attributes.has_key?("creator")
+ 				ids = []
         (t1 || []).each do |t2|
           next if t2.creator.blank?
-          next if t2.creator.to_i >= self.public_key.to_i
-          connection.execute("UPDATE #{target_db_name}.#{table} 
-          SET creator = #{self.encode(t2.creator)} 
-          WHERE creator = #{t2.creator};")
+					if !ids.include?(t2.creator.to_i)
+		        connection.execute("UPDATE #{target_db_name}.#{table} 
+		        SET creator = #{self.encode(t2.creator)} 
+		        WHERE creator = #{t2.creator};")
+		        ids << t2.creator.to_i
+		      end      
         end
       end
 
       if t.attributes.has_key?("provider_id")
+ 				ids = []
         (t1 || []).each do |t2|
           next if t2.provider_id.blank?
-          next if t2.provider_id.to_i  >= self.public_key.to_i
-          
-          connection.execute("UPDATE #{target_db_name}.#{table} 
-          SET provider_id = #{self.encode(t2.provider_id)} 
-          WHERE provider_id = #{t2.provider_id};")
+					if !ids.include?(t2.provider_id.to_i)
+		        connection.execute("UPDATE #{target_db_name}.#{table} 
+		        SET provider_id = #{self.encode(t2.provider_id)} 
+		        WHERE provider_id = #{t2.provider_id};")
+		        ids << t2.provider_id.to_i
+		      end
         end
       end
 
       if t.attributes.has_key?("voided_by")
+ 				ids = []
         (t1 || []).each do |t2|
           next if t2.voided_by.blank?	
-          next if t2.voided_by.to_i >= self.public_key.to_i
-          connection.execute("UPDATE #{target_db_name}.#{table} 
-          SET voided_by = #{self.encode(t2.voided_by)} 
-          WHERE voided_by = #{t2.voided_by};")
+					if !ids.include?(t2.voided_by.to_i)
+		        connection.execute("UPDATE #{target_db_name}.#{table} 
+		        SET voided_by = #{self.encode(t2.voided_by)} 
+		        WHERE voided_by = #{t2.voided_by};")
+		        ids << t2.voided_by.to_i
+		      end
         end
       end
 
