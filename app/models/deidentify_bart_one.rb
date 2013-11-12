@@ -460,65 +460,27 @@ class DeidentifyBartOne < ActiveRecord::Base
   def self.update_all_tables_to_fake_user_ids
     connection = ActiveRecord::Base.connection
     connection.execute("SET foreign_key_checks = 0;")
-
+		columns = ["changed_by", "creator","provider_id", "voided_by"]
+		      
     ActiveRecord::Base.connection.tables.each_with_index do |table, i|
-      t1 = self.find_by_sql("SELECT * FROM #{table}")
-      next if t1.blank?
 
       t = self.find_by_sql("SELECT * FROM #{table} LIMIT 1")[0]
+      next if t.blank?
       
-      if t.attributes.has_key?("changed_by") 
- 				ids = []
-        (t1 || []).each do |t2|
-          next if t2.changed_by.blank?        
-          if !ids.include?(t2.changed_by.to_i)   
-		        connection.execute("UPDATE #{target_db_name}.#{table} 
-		        SET changed_by = #{self.encode(t2.changed_by)} 
-		        WHERE changed_by = #{t2.changed_by};")
-		        ids << t2.changed_by.to_i
-		      end  
-        end
-      end
-
-      if t.attributes.has_key?("creator")
- 				ids = []
-        (t1 || []).each do |t2|
-          next if t2.creator.blank?
-					if !ids.include?(t2.creator.to_i)
-		        connection.execute("UPDATE #{target_db_name}.#{table} 
-		        SET creator = #{self.encode(t2.creator)} 
-		        WHERE creator = #{t2.creator};")
-		        ids << t2.creator.to_i
-		      end      
-        end
-      end
-
-      if t.attributes.has_key?("provider_id")
- 				ids = []
-        (t1 || []).each do |t2|
-          next if t2.provider_id.blank?
-					if !ids.include?(t2.provider_id.to_i)
-		        connection.execute("UPDATE #{target_db_name}.#{table} 
-		        SET provider_id = #{self.encode(t2.provider_id)} 
-		        WHERE provider_id = #{t2.provider_id};")
-		        ids << t2.provider_id.to_i
+      columns.each do |col|
+		    if t.attributes.has_key?(col)
+		    
+					t1 = self.find_by_sql("SELECT DISTINCT(#{col}) FROM #{table} WHERE #{col} < #{self.public_key}")
+		    	break if t1.blank?
+		      (t1 || []).each do |t2|
+		      	col_value = t2.read_attribute(col)
+		        next if col_value.blank?         
+			      connection.execute("UPDATE #{target_db_name}.#{table} 
+			      SET #{col} = #{self.encode(col_value)} 
+			      WHERE #{col} = #{col_value};")
 		      end
-        end
-      end
-
-      if t.attributes.has_key?("voided_by")
- 				ids = []
-        (t1 || []).each do |t2|
-          next if t2.voided_by.blank?	
-					if !ids.include?(t2.voided_by.to_i)
-		        connection.execute("UPDATE #{target_db_name}.#{table} 
-		        SET voided_by = #{self.encode(t2.voided_by)} 
-		        WHERE voided_by = #{t2.voided_by};")
-		        ids << t2.voided_by.to_i
-		      end
-        end
-      end
-
+		    end
+			end
       puts "updated table: #{table} ...."
     end
   end
