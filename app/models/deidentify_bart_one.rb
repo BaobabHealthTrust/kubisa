@@ -470,7 +470,7 @@ class DeidentifyBartOne < ActiveRecord::Base
       columns.each do |col|
 		    if t.attributes.has_key?(col)
 		    
-					t1 = self.find_by_sql("SELECT DISTINCT(#{col}) FROM #{table} WHERE #{col} < #{self.public_key}")
+					t1 = self.find_by_sql("SELECT DISTINCT(#{col}) FROM #{table} WHERE #{col} < #{self.modulo}")
 		    	break if t1.blank?
 		      (t1 || []).each do |t2|
 		      	col_value = t2.read_attribute(col)
