@@ -402,12 +402,13 @@ class DeidentifyBartOne < ActiveRecord::Base
     (PatientIdentifier.where(:patient_id => new_patient_id) || []).each_with_index do |identifier, i|
       connection = ActiveRecord::Base.connection
       
+      idfier = connection.quote(identifier.identifier)
       if identifier.identifier_type == @@nationl_identifier_type.id
         #identifier.identifier = "NI #{new_patient_id + i}"	   
 				connection.execute("UPDATE #{target_db_name}.patient_identifier 
 					SET identifier = \"NI #{new_patient_id + i}\"
 						WHERE patient_id = #{identifier.patient_id} 
-							AND identifier = \"#{identifier.identifier}\"
+							AND identifier = #{idfier}
 							AND identifier_type = #{identifier.identifier_type};")
       	   
       elsif identifier.identifier_type == @@arv_identifier_type.id
@@ -415,7 +416,7 @@ class DeidentifyBartOne < ActiveRecord::Base
 				connection.execute("UPDATE #{target_db_name}.patient_identifier 
 					SET identifier = \"ARV #{new_patient_id + i}\"
 						WHERE patient_id = #{identifier.patient_id} 
-							AND identifier = \"#{identifier.identifier}\" 
+							AND identifier = #{idfier}
 							AND identifier_type = #{identifier.identifier_type};")
       	
       elsif identifier.identifier_type == @@archived_filing_identifier_type.id
@@ -423,7 +424,7 @@ class DeidentifyBartOne < ActiveRecord::Base
 				connection.execute("UPDATE #{target_db_name}.patient_identifier 
 					SET identifier = \"AFNL #{new_patient_id + i}\"
 						WHERE patient_id = #{identifier.patient_id} 
-							AND identifier = \"#{identifier.identifier}\" 
+							AND identifier = #{idfier} 
 							AND identifier_type = #{identifier.identifier_type};")
       	      
       elsif identifier.identifier_type == @@filing_identifier_type.id
@@ -431,7 +432,7 @@ class DeidentifyBartOne < ActiveRecord::Base
 				connection.execute("UPDATE #{target_db_name}.patient_identifier 
 					SET identifier = \"FNL #{new_patient_id + i}\"
 						WHERE patient_id = #{identifier.patient_id} 
-							AND identifier = \"#{identifier.identifier}\"  
+							AND identifier = #{idfier} 
 							AND identifier_type = #{identifier.identifier_type};")
       	
 				# elsif identifier.identifier_type == @@old_nationl_identifier_type.id
@@ -441,7 +442,7 @@ class DeidentifyBartOne < ActiveRecord::Base
 				connection.execute("UPDATE #{target_db_name}.patient_identifier 
 					SET identifier = \"OTHER #{new_patient_id + i}\"
 						WHERE patient_id = #{identifier.patient_id} 
-							AND identifier = \"#{identifier.identifier}\" 
+							AND identifier = #{idfier} 
 							AND identifier_type = #{identifier.identifier_type};")
       end
     end
