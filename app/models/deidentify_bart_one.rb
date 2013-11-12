@@ -478,6 +478,7 @@ class DeidentifyBartOne < ActiveRecord::Base
 			      connection.execute("UPDATE #{target_db_name}.#{table} 
 			      SET #{col} = #{self.encode(col_value)} 
 			      WHERE #{col} = #{col_value};")
+			      
 		      end
 		    end
 			end
