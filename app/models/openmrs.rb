@@ -44,8 +44,6 @@ class Openmrs < ActiveRecord::Base
     connection = ActiveRecord::Base.connection
     connection.select_all("SELECT MAX(person_id) person_id FROM #{target_db_name}.person;")[0]['person_id']
 	end
-
-  #private
   
   def self.fake_user_table
     connection = ActiveRecord::Base.connection                                
@@ -72,48 +70,28 @@ class Openmrs < ActiveRecord::Base
     connection = ActiveRecord::Base.connection
     connection.execute("SET foreign_key_checks = 0;")
 
+		columns = ["changed_by", "creator","provider_id", "voided_by"]
+		      
     ActiveRecord::Base.connection.tables.each_with_index do |table, i|
-      t1 = self.find_by_sql("SELECT * FROM #{table}")
-      next if t1.blank?
 
       t = self.find_by_sql("SELECT * FROM #{table} LIMIT 1")[0]
+      next if t.blank?
       
-      if t.attributes.has_key?("changed_by")
-        (t1 || []).each do |t2|
-          next if t2.changed_by.blank?
-          connection.execute("UPDATE #{target_db_name}.#{table} 
-          SET changed_by = #{self.encode(t2.changed_by)} 
-          WHERE changed_by = #{t2.changed_by};")
-        end
-      end
-
-      if t.attributes.has_key?("creator")
-        (t1 || []).each do |t2|
-          next if t2.creator.blank?
-          connection.execute("UPDATE #{target_db_name}.#{table} 
-          SET creator = #{self.encode(t2.creator)} 
-          WHERE creator = #{t2.creator};")
-        end
-      end
-
-      if t.attributes.has_key?("provider_id")
-        (t1 || []).each do |t2|
-          next if t2.provider_id.blank?
-          connection.execute("UPDATE #{target_db_name}.#{table} 
-          SET provider_id = #{self.encode(t2.provider_id)} 
-          WHERE provider_id = #{t2.provider_id};")
-        end
-      end
-
-      if t.attributes.has_key?("voided_by")
-        (t1 || []).each do |t2|
-          next if t2.voided_by.blank?
-          connection.execute("UPDATE #{target_db_name}.#{table} 
-          SET voided_by = #{self.encode(t2.voided_by)} 
-          WHERE voided_by = #{t2.voided_by};")
-        end
-      end
-
+      columns.each do |col|
+		    if t.attributes.has_key?(col)
+		    
+					t1 = self.find_by_sql("SELECT DISTINCT(#{col}) FROM #{table} WHERE #{col} < #{self.modulo}")
+		    	break if t1.blank?
+		      (t1 || []).each do |t2|
+		      	col_value = t2.read_attribute(col)
+		        next if col_value.blank?         
+			      connection.execute("UPDATE #{target_db_name}.#{table} 
+			      SET #{col} = #{self.encode(col_value)} 
+			      WHERE #{col} = #{col_value};")
+			      
+		      end
+		    end
+			end
       puts "updated table: #{table} ...."
     end
   end
